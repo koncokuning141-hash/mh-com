@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>VOID-CORE: Cinematic Extremity</title>
+    <style>
+        body { margin: 0; background: #000; overflow: hidden; }
+        #overlay { position: absolute; top: 20px; left: 20px; color: #fff; z-index: 10; font-family: 'Courier New', monospace; }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+    <div id="overlay">
+        <h1>VOID-CORE // SYSTEM READY</h1>
+        <input type="file" id="audioUpload" accept="audio/*">
+    </div>
+
+    <script id="vertexShader" type="x-shader/x-vertex">
+        uniform float uTime;
+        uniform float uBass;
+        void main() {
+            vec3 pos = position;
+            // Logika Umbrella: Melengkungkan partikel berdasarkan bass
+            float dist = length(pos.xz);
+            pos.y += sin(dist * 2.0 - uTime) * uBass * 2.0;
+            
+            vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
+            gl_PointSize = 2.0 * (1.0 + uBass);
+            gl_Position = projectionMatrix * mvPosition;
+        }
+    </script>
+
+    <script id="fragmentShader" type="x-shader/x-fragment">
+        void main() {
+            gl_FragColor = vec4(0.0, 0.8, 1.0, 1.0); // Warna Cyan Industrial
+        }
+    </script>
+
+    <script>
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        // Membuat Geometri Payung (Umbrella)
+        const geometry = new THREE.BufferGeometry();
+        const count = 10000;
+        const positions = new Float32Array(count * 3);
+        for(let i=0; i<count*3; i+=3) {
+            positions[i] = (Math.random() - 0.5) * 10;
+            positions[i+1] = 0;
+            positions[i+2] = (Math.random() - 0.5) * 10;
+        }
+        geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+
+        const material = new THREE.ShaderMaterial({
+            uniforms: { uTime: {value: 0}, uBass: {value: 0} },
+            vertexShader: document.getElementById('vertexShader').textContent,
+            fragmentShader: document.getElementById('fragmentShader').textContent
+        });
+
+        const points = new THREE.Points(geometry, material);
+        scene.add(points);
+        camera.position.z = 5;
+
+        // Audio Setup
+        let analyser;
+        document.getElementById('audioUpload').onchange = function() {
+            const audio = new Audio(URL.createObjectURL(this.files[0]));
+            audio.play();
+            const ctx = new AudioContext();
+            analyser = ctx.createAnalyser();
+            analyser.fftSize = 64;
+            ctx.createMediaElementSource(audio).connect(analyser);
+            analyser.connect(ctx.destination);
+            animate();
+        };
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const data = new Uint8Array(analyser.frequencyBinCount);
+            analyser.getByteFrequencyData(data);
+            
+            material.uniforms.uBass.value = data[0] / 128.0;
+            material.uniforms.uTime.value += 0.05;
+            
+            points.rotation.y += 0.005;
+            renderer.render(scene, camera);
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>eMHa cOm</title>
+    <style>
+
+        
+        body { font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; height: 100vh; background: #f8f9fa; }
+        .sidebar { width: 250px; background: #2c3e50; color: white; padding: 20px; display: flex; height: 100vh; overflow-y: auto; flex-direction: column; flex-shrink: 0; }
+        .nav-link { cursor: pointer; padding: 10px; border-radius: 6px; margin: 6px 0; background: #34495e; transition: 0.3s; }
+        .nav-link:hover { background: #3498db; }
+        .but-link { cursor: pointer; padding: 10px; border-radius: 6px; margin: 6px 0; background: #34495e; transition: 0.3s; }
+        .but-link:hover { background: #04c735; }
+
+        .main { flex: 1; padding: 30px; overflow-y: auto; }
+        .card { background: white; padding: 20px; border-radius: 10px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .dashboard-grid { display: flex; gap: 10px; flex-wrap: wrap; }
+        .stat-card { flex: 1; min-width: 200px; padding: 15px; border-radius: 8px; color: white; }
+        input, select { width: 100%; padding: 10px; margin: 8px 0; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
+        button { padding: 10px 15px; background: #3498db; color: white; border: none; border-radius: 6px; cursor: pointer; margin-right: 5px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); }
+        .modal-content { background: #fff; margin: 15% auto; padding: 30px; width: 300px; border-radius: 15px; text-align: center; }
+        @media print {
+            body * { visibility: hidden; }
+            #print-invoice, #print-invoice * { visibility: visible; }
+            #print-invoice { position: absolute; left: 0; top: 0; width: 100%; display: block !important; }
+        }
+    </style>
+</head>
+<body>
+    
+<aside class="sidebar">
+    <div class="logo-container" style="text-align: center; margin-bottom: 20px; flex-shrink: 0;">
+    <img src="logo.png" alt="Logo eMHa Com" 
+         class="rounded-full mx-auto object-contain"
+         style="width: 60px; height: 60px; display: center;">
+    <h2 style="color: white; margin-top: 10px; font-size: 1.2rem;">eMHa Com</h2>
+</div>
+    
+    <div class="nav-link" onclick="window.location.href='index.html'">Home</div>
+    <hr style="width:80%; opacity:0.3; margin: 10px auto;">
+
+    <div class="nav-link" onclick="show('dashboard')">Dashboard</div>
+    <div class="nav-link" onclick="show('pos')">Kasir</div>
+    <div class="nav-link" onclick="show('inventaris')">Inventaris</div>
+    <div class="nav-link" onclick="show('operasional')">Operasional</div>
+    <div class="nav-link" onclick="show('riwayat')">Riwayat Transaksi</div>
+
+    <h4 style="color: white; margin-top: 20px;">Backup & Restore Data</h4>
+    <button onclick="document.getElementById('backup-data').click()" class="nav-link w-full">Backup Data</button> 
+    <input type="file" id="backup-data" onchange="backupData(event)" style="display:none;"> 
+    
+    <button onclick="document.getElementById('restore-file').click()" class="nav-link w-full">Restore Data</button>
+    <input type="file" id="restore-file" onchange="restoreData(event)" style="display:none;"> 
+    
+    <div class="nav-link" onclick="window.location.href='void.html'">void</div>
+    <hr style="width:80%; opacity:0.3; margin: 10px auto;">
+    &copy; 2026 eMHa Computer<br>All Rights Reserved.
+</aside>
+
+<div id="popup-kembalian" class="modal">
+    <div class="modal-content">
+        <h2 style="color: #27ae60;">Transaksi Sukses!</h2>
+        <p>Kembalian:</p>
+        <h1 id="txt-kembalian" style="color:#e74c3c;">Rp0</h1>
+        <button onclick="jalankanCetak()" style="background:#27ae60; width: 100%; padding: 12px; font-size: 16px;">Tutup & Cetak Invoice</button>
+    </div>
+</div>
+
+<main class="main"> 
+    <section id="dashboard" class="card">
+        <h1>Keuangan Realtime</h1>
+        <button onclick="exportLaporanPDF()" style="background:#e67e22">Ekspor Keuangan ke PDF</button>
+        <div class="dashboard-grid" style="margin-top:20px;">
+            <div class="stat-card" style="background:#3498db;"><h3>Penjualan</h3><p id="sum-penjualan">Rp0</p></div>
+            <div class="stat-card" style="background:#e67e22;"><h3>Total Ops</h3><p id="sum-ops-dash">Rp0</p></div>
+            <div class="stat-card" style="background:#e74c3c;"><h3>Total Modal</h3><p id="sum-modal-dash">Rp0</p></div>
+            <div class="stat-card" style="background:#27ae60;"><h3>Laba Bersih</h3><p id="sum-laba">Rp0</p></div>
+        </div>
+    </section>
+
+    <div class="kurs-widget" style="background: #2a2a2a; padding: 15px; border-radius: 8px; color: white; width: 250px;">
+    <h3>Kurs USD ke IDR</h3>
+    <div id="kurs-data" style="font-size: 1.5rem; font-weight: bold;">Loading...</div>
+</div>
+
+<div>
+<iframe 
+ src="https://maps.google.com/maps?width=600&height=400&hl=en&q=mujib%20int&t=&z=20&ie=UTF8&iwloc=B&output=embed"
+  width="100%" 
+  height="300" 
+  style="border:0;" 
+  allowfullscreen="" 
+  loading="lazy">
+</iframe>
+</div>
+
+<script>
+    // Fungsi untuk mengambil data kurs
+    async function getKurs() {
+        const apiKey = 'd368f830a48b8fd248fe1ee9'; // Daftar gratis di exchangerate-api.com
+        const url = `https://v6.exchangerate-api.com/v6/${apiKey}/latest/USD`;
+
+        try {
+            const response = await fetch(url);
+            const data = await response.json();
+            
+            // Ambil kurs IDR
+            const rate = data.conversion_rates.IDR;
+            
+            // Tampilkan ke elemen HTML
+            document.getElementById('kurs-data').innerText = 'Rp ' + rate.toLocaleString();
+        } catch (error) {
+            document.getElementById('kurs-data').innerText = 'Gagal memuat data';
+        }
+    }
+
+    // Jalankan fungsi
+    getKurs();
+</script>
+
+    <section id="pos" class="card" style="display:none;">
+        <h1>Kasir</h1>
+        <div id="product-buttons"></div><hr>
+        <table id="tbl-keranjang"><thead><tr><th>Barang</th><th>Qty</th><th>Total</th></tr></thead><tbody id="cart-body"></tbody></table>
+        <div style="display:flex; gap:10px;">
+            <input id="input-diskon" type="number" placeholder="Nilai Diskon" oninput="renderCart()">
+            <select id="tipe-diskon" onchange="renderCart()">
+                <option value="persen">Persen (%)</option><option value="rupiah">Rupiah (Rp)</option>
+            </select>
+        </div>
+        <h3>Total Bayar</h3> 
+        <span id="final-total" style="font-size: 60px;">Rp0</span>
+        <input id="bayar" type="number" placeholder="Jumlah Bayar">
+        <button onclick="prosesBayar()" class="but-link">Bayar</button>
+    </section>
+
+    <section id="inventaris" class="card" style="display:none;">
+        <h1>Data Inventaris</h1>
+        <button onclick="exportInventarisPDF()" style="background:#e67e22">Ekspor Inventaris ke PDF</button>
+        <input id="edit-index" type="hidden" value="-1">
+        <input id="kode-brg" placeholder="Kode Barang">
+        <input id="nama-brg" placeholder="Nama Barang">
+        <input id="stok-brg" type="number" placeholder="Stok">
+        <input id="modal-brg" type="number" placeholder="Modal">
+        <input id="jual-brg" type="number" placeholder="Jual">
+        <button onclick="saveBarang()" class="nav-link">Simpan/Update</button>
+        <table><thead><tr><th>Tanggal</th><th>Kode</th><th>Nama</th><th>Stok</th><th>Modal</th><th>Jual</th><th>Aksi</th></tr></thead><tbody id="tbl-body"></tbody></table>
+    </section>
+
+    <section id="operasional" class="card" style="display:none;">
+        <h1>Biaya Operasional</h1>
+        <input id="nama-ops" placeholder="Nama Biaya">
+        <input id="nom-ops" type="number" placeholder="Nominal">
+        <button onclick="saveOps()">Catat Biaya</button>
+        <table><thead><tr><th>Nama</th><th>Nominal</th><th>Aksi</th></tr></thead><tbody id="tbl-ops"></tbody></table>
+    </section>
+
+    <section id="riwayat" class="card" style="display:none;">
+        <h1>Riwayat Transaksi</h1>
+        <button onclick="resetRiwayat()" style="background:#e74c3c;">Reset Semua Riwayat</button>
+        <table><thead><tr><th>Waktu</th><th>Total</th></tr></thead><tbody id="tbl-riwayat"></tbody></table>
+    </section>
+    
+    
+</main>
+
+<div id="print-invoice" style="display:none; padding: 20px;">
+    <div style="text-align: center;"><h2>INVOICE PEMBAYARAN</h2><p id="inv-waktu"></p></div><hr>
+    <table style="width: 100%; border-collapse: collapse;">
+        <thead><tr style="border-bottom:1px solid #000;"><th>Barang</th><th>Qty</th><th>Total</th></tr></thead>
+        <tbody id="inv-body"></tbody>
+    </table>
+    <div style="margin-top:20px; font-weight:bold; font-size:18px;">Total: <span id="inv-total"></span></div>
+</div>
+
+<script>
+
+ // FUNGSI BACKUP: Mengunduh data dari LocalStorage ke file .json
+    function backupData() {
+        const data = {
+            daftar_barang: localStorage.getItem('daftar_barang'),
+            penjualan: localStorage.getItem('penjualan'),
+            biaya_ops: localStorage.getItem('biaya_ops'),
+            toko_nama: localStorage.getItem('toko_nama')
+        };
+        
+        const blob = new Blob([JSON.stringify(data)], {type: "application/json"});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        
+        a.href = url;
+        a.download = `backup_pos_${new Date().toLocaleDateString()}.json`;
+        a.click();
+    }
+
+    // FUNGSI RESTORE: Membaca file .json dan memasukkannya ke LocalStorage
+    function restoreData(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const data = JSON.parse(e.target.result);
+                
+                // Simpan kembali ke localStorage
+                if(data.daftar_barang) localStorage.setItem('daftar_barang', data.daftar_barang);
+                if(data.penjualan) localStorage.setItem('penjualan', data.penjualan);
+                if(data.biaya_ops) localStorage.setItem('biaya_ops', data.biaya_ops);
+                if(data.toko_nama) localStorage.setItem('toko_nama', data.toko_nama);
+                
+                alert("Data berhasil dipulihkan! Halaman akan dimuat ulang.");
+                location.reload();
+            } catch (err) {
+                alert("Gagal membaca file. Pastikan file adalah file backup yang benar.");
+            }
+        };
+        reader.readAsText(file);
+    }
+
+
+    let cart = [];
+    let printData = { items: [], total: "" };
+    function formatRupiah(a) { return "Rp" + parseInt(a).toLocaleString('id-ID'); }
+    function show(id) { document.querySelectorAll('section').forEach(s => s.style.display = 'none'); document.getElementById(id).style.display = 'block'; if(id === 'pos') renderPos(); }
+
+    function resetRiwayat() {
+        if (confirm("Apakah Anda yakin ingin menghapus semua riwayat transaksi?")) {
+            localStorage.removeItem('penjualan');
+            renderRiwayat(); updateDashboard();
+        }
+    }
+
+    function saveBarang() {
+        let index = parseInt(document.getElementById('edit-index').value);
+        let list = JSON.parse(localStorage.getItem('daftar_barang') || '[]');
+        let data = { waktu: new Date().toLocaleDateString('id-ID'), kode: document.getElementById('kode-brg').value, name: document.getElementById('nama-brg').value, stok: parseInt(document.getElementById('stok-brg').value) || 0, modal: document.getElementById('modal-brg').value, price: document.getElementById('jual-brg').value };
+        if (index === -1) list.push(data); else { data.waktu = list[index].waktu; list[index] = data; document.getElementById('edit-index').value = -1; }
+        localStorage.setItem('daftar_barang', JSON.stringify(list));
+        renderTabel(); updateDashboard();
+    }
+
+    function prosesBayar() {
+        let total = document.getElementById('final-total').innerText;
+        let totalRaw = parseInt(total.replace(/[^0-9]/g, ''));
+        let bayar = parseInt(document.getElementById('bayar').value);
+        if (isNaN(bayar) || bayar < totalRaw) return alert("Uang kurang!");
+        printData = { items: [...cart], total: total };
+        let list = JSON.parse(localStorage.getItem('daftar_barang') || '[]');
+        cart.forEach(c => { let b = list.find(x => x.name == c.name); if(b) b.stok -= c.qty; });
+        localStorage.setItem('daftar_barang', JSON.stringify(list));
+        let sales = JSON.parse(localStorage.getItem('penjualan') || '[]');
+        sales.push({ waktu: new Date().toLocaleString(), total: totalRaw });
+        localStorage.setItem('penjualan', JSON.stringify(sales));
+        document.getElementById('txt-kembalian').innerText = formatRupiah(bayar - totalRaw);
+        document.getElementById('popup-kembalian').style.display = 'block';
+        cart = []; renderCart(); renderTabel(); updateDashboard(); renderRiwayat(); document.getElementById('bayar').value = '';
+    }
+
+    function jalankanCetak() {
+        document.getElementById('inv-waktu').innerText = "Waktu: " + new Date().toLocaleString();
+        document.getElementById('inv-body').innerHTML = printData.items.map(i => `<tr><td>${i.name}</td><td>${i.qty}</td><td>${formatRupiah(i.total)}</td></tr>`).join('');
+        document.getElementById('inv-total').innerText = printData.total;
+        setTimeout(() => { window.print(); document.getElementById('popup-kembalian').style.display = 'none'; }, 300);
+    }
+
+    
+
+    function renderPos() { let l = JSON.parse(localStorage.getItem('daftar_barang') || '[]'); document.getElementById('product-buttons').innerHTML = l.map(b => `<button onclick="addToCart('${b.name}', ${b.price}, ${b.stok})">${b.kode}-${b.name}</button>`).join(''); }
+    function addToCart(name, price, stok) { let i = cart.find(x => x.name === name); if(i ? i.qty >= stok : stok <= 0) return alert("Stok habis!"); if(i) { i.qty++; i.total += parseInt(price); } else { cart.push({name, price: parseInt(price), qty: 1, total: parseInt(price)}); } renderCart(); }
+    function renderCart() { let v = parseFloat(document.getElementById('input-diskon').value) || 0; let t = document.getElementById('tipe-diskon').value; let sub = cart.reduce((a,b) => a + b.total, 0); let total = (t === 'persen') ? (sub - (sub * v / 100)) : (sub - v); document.getElementById('cart-body').innerHTML = cart.map(i => `<tr><td>${i.name}</td><td>${i.qty}</td><td>${formatRupiah(i.total)}</td></tr>`).join(''); document.getElementById('final-total').innerText = formatRupiah(total > 0 ? total : 0); }
+    function updateDashboard() { let b = JSON.parse(localStorage.getItem('daftar_barang') || '[]'); let s = JSON.parse(localStorage.getItem('penjualan') || '[]'); let o = JSON.parse(localStorage.getItem('biaya_ops') || '[]'); let p = s.reduce((a,x) => a + x.total, 0); let m = b.reduce((a,x) => a + (parseInt(x.modal || 0) * parseInt(x.stok || 0)), 0); let op = o.reduce((a,x) => a + parseInt(x.nominal || 0), 0); document.getElementById('sum-penjualan').innerText = formatRupiah(p); document.getElementById('sum-modal-dash').innerText = formatRupiah(m); document.getElementById('sum-ops-dash').innerText = formatRupiah(op); document.getElementById('sum-laba').innerText = formatRupiah(p - (m + op)); }
+    function renderTabel() { let l = JSON.parse(localStorage.getItem('daftar_barang') || '[]'); document.getElementById('tbl-body').innerHTML = l.map((b,i) => `<tr><td>${b.waktu}</td><td>${b.kode}</td><td>${b.name}</td><td>${b.stok}</td><td>${formatRupiah(b.modal)}</td><td>${formatRupiah(b.price)}</td><td><button onclick="editBarang(${i})">Edit</button><button onclick="hapusBarang(${i})">Hapus</button></td></tr>`).join(''); }
+    function renderOps() { let o = JSON.parse(localStorage.getItem('biaya_ops') || '[]'); document.getElementById('tbl-ops').innerHTML = o.map((x,i) => `<tr><td>${x.name}</td><td>${formatRupiah(x.nominal)}</td><td><button onclick="hapusOps(${i})">Hapus</button></td></tr>`).join(''); }
+    function renderRiwayat() { let s = JSON.parse(localStorage.getItem('penjualan') || '[]'); document.getElementById('tbl-riwayat').innerHTML = s.map(x => `<tr><td>${x.waktu}</td><td>${formatRupiah(x.total)}</td></tr>`).join(''); }
+    function editBarang(i) { let l = JSON.parse(localStorage.getItem('daftar_barang') || '[]'); let b = l[i]; document.getElementById('edit-index').value = i; document.getElementById('kode-brg').value = b.kode; document.getElementById('nama-brg').value = b.name; document.getElementById('stok-brg').value = b.stok; document.getElementById('modal-brg').value = b.modal; document.getElementById('jual-brg').value = b.price; }
+    function hapusBarang(i) { let l = JSON.parse(localStorage.getItem('daftar_barang')); l.splice(i,1); localStorage.setItem('daftar_barang', JSON.stringify(l)); renderTabel(); updateDashboard(); }
+    function saveOps() { let o = JSON.parse(localStorage.getItem('biaya_ops') || '[]'); o.push({name: document.getElementById('nama-ops').value, nominal: document.getElementById('nom-ops').value}); localStorage.setItem('biaya_ops', JSON.stringify(o)); renderOps(); updateDashboard(); }
+    function hapusOps(i) { let l = JSON.parse(localStorage.getItem('biaya_ops')); l.splice(i,1); localStorage.setItem('biaya_ops', JSON.stringify(l)); renderOps(); updateDashboard(); }
+    function exportLaporanPDF() { let w = window.open('', '_blank'); w.document.write(`<html><body><h1>Laporan Keuangan</h1><p>Penjualan: ${document.getElementById('sum-penjualan').innerText}</p><p>Laba: ${document.getElementById('sum-laba').innerText}</p></body></html>`); w.document.close(); setTimeout(() => w.print(), 500); }
+    function exportInventarisPDF() { let l = JSON.parse(localStorage.getItem('daftar_barang')||'[]'); let r = l.map(b => `<tr><td>${b.kode}</td><td>${b.name}</td><td>${b.stok}</td></tr>`).join(''); let w = window.open('', '_blank'); w.document.write(`<html><body><table border="1"><thead><tr><th>Kode</th><th>Nama</th><th>Stok</th></tr></thead><tbody>${r}</tbody></table></body></html>`); w.document.close(); setTimeout(() => w.print(), 500); }
+    window.onload = () => { renderTabel(); renderOps(); renderRiwayat(); updateDashboard(); };
+
+       
+</script>
+<script> src=landing.html</script>
+</body>
+</html>
